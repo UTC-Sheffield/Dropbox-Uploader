@@ -38,6 +38,7 @@ QUIET=0
 SHOW_PROGRESSBAR=0
 SKIP_EXISTING_FILES=0
 ERROR_STATUS=0
+SKIP_VERY_NEW_FILES=0
 
 #Don't edit these...
 API_REQUEST_TOKEN_URL="https://api.dropbox.com/1/oauth/request_token"
@@ -72,7 +73,7 @@ shopt -s nullglob #Bash allows filename patterns which match no files to expand 
 shopt -s dotglob  #Bash includes filenames beginning with a "." in the results of filename expansion
 
 #Look for optional config file parameter
-while getopts ":qpskdf:" opt; do
+while getopts ":qpsnkdf:" opt; do
     case $opt in
 
     f)
@@ -97,6 +98,10 @@ while getopts ":qpskdf:" opt; do
 
     s)
       SKIP_EXISTING_FILES=1
+    ;;
+    
+    n)
+      SKIP_VERY_NEW_FILES=1
     ;;
 
     \?)
@@ -422,7 +427,18 @@ function db_upload_file
         print " > Skipping not allowed file name \"$FILE_DST\"\n"
         return
     fi
+    
+    
+    FILE_MOD=$(stat -c %Y "$FILE_SRC") 
+    CURR_TIME=$(date +%s)
+    BEFORE=$(expr $CURR_TIME - 300)
 
+    #print "> FILE_MOD  $FILE_MOD  CURR_TIME $CURR_TIME BEFORE $BEFORE \n"
+    if [[ $FILE_MOD -gt $BEFORE && $SKIP_VERY_NEW_FILES == 1 ]]; then
+        print " > Skipping too new \"$FILE_DST\"\n"
+        return
+    fi
+        
     shopt -u nocasematch
 
     #Checking file size
